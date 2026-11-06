@@ -22,6 +22,7 @@ p{margin:0}
 .row{display:grid;grid-template-columns:56px 68px 68px minmax(0,1fr) 36px;gap:4px;align-items:center}
 select,input[type=text],input[type=date]{width:100%;min-width:0;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:inherit;padding:0 8px}
 .row select{font-size:15px;padding:0 2px}
+.row .memo{grid-column:1/-1;font-size:15px}
 select:focus-visible,input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
 button{font:inherit;cursor:pointer}
 .x{height:44px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--mute);padding:0}
@@ -75,7 +76,7 @@ button{font:inherit;cursor:pointer}
   var NIGHT_FROM=18, NIGHT_OFF=-5; // 학교 기준: 주간은 10분 전, 야간은 5분 전부터 출석 체크
   var pad=function(n){return (n<10?"0":"")+n};
 
-  function clean(name){return Array.from(name.trim().replace(/[\[\]]/g,"")).slice(0,12).join("")}
+  function clean(name,n){return Array.from(name.trim().replace(/[\[\]]/g,"")).slice(0,n||12).join("")}
   function startOf(today,c,K){
     var d=new Date(today.getFullYear(),today.getMonth(),today.getDate());
     d.setDate(d.getDate()+(JS_DAY[c.day]-d.getDay()+7)%7);
@@ -88,8 +89,8 @@ button{font:inherit;cursor:pointer}
     return Math.max(1,Math.floor(Math.round((u-f)/86400000)/7)+1);
   }
   window.buildEvent=function(c,kind,untilStr,today){
-    var K=KIND[kind], s=startOf(today,c,K), e=new Date(s.getTime()+60000), text="["+clean(c.name)+"] "+K.line;
-    return {summary:text,description:K.line+"\n"+K.tip,
+    var K=KIND[kind], s=startOf(today,c,K), e=new Date(s.getTime()+60000), memo=c.memo?clean(c.memo,24):"", text=K.line+" ["+clean(c.name)+"]"+(memo?" "+memo:"");
+    return {summary:text,description:(memo?memo+"\n":"")+K.tip,
       start:{dateTime:iso(s),timeZone:TZ},end:{dateTime:iso(e),timeZone:TZ},
       recurrence:["RRULE:FREQ=WEEKLY;COUNT="+weeksUntil(s,untilStr)],
       reminders:{useDefault:false,overrides:[{method:"popup",minutes:0}]}};
@@ -107,10 +108,11 @@ button{font:inherit;cursor:pointer}
     mins.forEach(function(v){opt(M,v,pad(v)+"분")}); M.value=mm;
     var n=document.createElement("input"); n.type="text"; n.placeholder="과목명"; n.value=d.name||""; n.maxLength=20; n.setAttribute("aria-label","과목명");
     var x=document.createElement("button"); x.type="button"; x.className="x"; x.textContent="✕"; x.setAttribute("aria-label","이 수업 지우기"); x.onclick=function(){r.remove();save()};
-    [D,H,M,n].forEach(function(e){e.addEventListener("input",save)});
-    r.append(D,H,M,n,x); return r;
+    var mo=document.createElement("input"); mo.type="text"; mo.className="memo"; mo.placeholder="강의실·교수님 (선택) 예: D0301 김영선 교수님"; mo.value=d.memo||""; mo.maxLength=24; mo.setAttribute("aria-label","강의실과 교수님(선택)");
+    [D,H,M,n,mo].forEach(function(e){e.addEventListener("input",save)});
+    r.append(D,H,M,n,x,mo); return r;
   }
-  function read(){return Array.from(rowsEl.children).map(function(r){var q=r.querySelectorAll("select,input");return {day:q[0].value,time:pad(+q[1].value)+":"+pad(+q[2].value),name:q[3].value}})}
+  function read(){return Array.from(rowsEl.children).map(function(r){var q=r.querySelectorAll("select,input");return {day:q[0].value,time:pad(+q[1].value)+":"+pad(+q[2].value),name:q[3].value,memo:q[4].value}})}
   function valid(l){return l.filter(function(c){return c.name.trim()})}
   function save(){try{localStorage.setItem("att-tt",JSON.stringify({rows:read(),until:untilEl.value}))}catch(e){}}
   function say(t,k){msg.className="msg"+(k?" "+k:"");msg.textContent=t}
