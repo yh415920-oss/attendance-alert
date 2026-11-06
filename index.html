@@ -61,7 +61,7 @@ button{font:inherit;cursor:pointer}
     <h2>3. 받을 알림</h2>
     <div class="list">
       <label class="chk"><input type="checkbox" id="kA" checked><span><b>출석 알림</b><small>수업 시작 10분 전(18시 이후 시작하는 야간 수업은 5분 전)에 "출석 시작 지금 체크하기"</small></span></label>
-      <label class="chk"><input type="checkbox" id="kB" checked><span><b>지각 변경 요청 알림</b><small>수업 시작 시각에 "지각 안 했는데 시스템상 지각이면 교수님께 변경 요청하기"</small></span></label>
+      <label class="chk"><input type="checkbox" id="kB" checked><span><b>지각 변경 요청 알림</b><small>수업 시작 시각에 "스마트캠퍼스 출결조회 확인, 지각 안 했는데 지각이면 교수님께 변경 요청하기"</small></span></label>
     </div>
   </section>
 
@@ -79,7 +79,7 @@ button{font:inherit;cursor:pointer}
   // ▲▲▲
   var SCOPE="https://www.googleapis.com/auth/calendar.app.created", TZ="Asia/Seoul";
   var DAYS=["월","화","수","목","금","토"], JS_DAY={"월":1,"화":2,"수":3,"목":4,"금":5,"토":6};
-  var KIND={A:{off:-10,line:"출석 시작 지금 체크하기",cal:"출석알림"},B:{off:0,line:"지각 안 했는데 시스템상 지각이면 교수님께 변경 요청하기",cal:"변경요청알림"}};
+  var KIND={A:{off:-10,line:"출석 시작 지금 체크하기",cal:"출석알림"},B:{off:0,line:"스마트캠퍼스 출결조회 확인, 지각 안 했는데 지각이면 교수님께 변경 요청하기",cal:"변경요청알림"}};
   var NIGHT_FROM=18, NIGHT_OFF=-5; // 학교 기준: 주간은 10분 전, 야간은 5분 전부터 출석 체크
   var pad=function(n){return (n<10?"0":"")+n};
 
