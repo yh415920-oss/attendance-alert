@@ -183,7 +183,7 @@ button{font:inherit;cursor:pointer}
     pick.classList.add("busy"); psay("사진을 읽는 중이에요. 잠시만 기다려 주세요…");
     try{
       var b64=await toJpegBase64(f);
-      var ctl=new AbortController(), timer=setTimeout(function(){ctl.abort()},60000);
+      var ctl=new AbortController(), timer=setTimeout(function(){ctl.abort()},70000); // 서버는 55초 안에 답을 준다
       var res=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain"},body:b64,signal:ctl.signal});
       clearTimeout(timer);
       var j=null; try{j=await res.json()}catch(e){}
