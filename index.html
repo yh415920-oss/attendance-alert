@@ -102,7 +102,7 @@ button{font:inherit;cursor:pointer}
 (function(){
   // ▼▼▼ 관리자가 한 번만 바꾸는 곳 ▼▼▼
   var CLIENT_ID="912805292087-a5oom79pqebg299q82pn9p7jff1ovnet.apps.googleusercontent.com"; // 구글 클라우드 OAuth 클라이언트 ID
-  var AI_ENDPOINT="https://royal-wave-1484aqab8rn6jw1un8t7tek9nv5xxcq37yz2dnxgq6bmjzbjfm.yh415920.workers.dev";  // 시간표 사진 읽기 서버(Cloudflare Worker) 주소. 예: https://attendance-ai.내이름.workers.dev  비워 두면 직접 입력만 돼요
+  var AI_ENDPOINT="https://script.google.com/macros/s/AKfycby6M8q7D-tGNStVCEglFskgf5Jr3RggXs9ohbanhcS5bFqyXaT-yUleBKYCnXPwbOXw/exec";  // 시간표 사진 읽기 서버(Google Apps Script 웹 앱) 주소. 예: https://script.google.com/macros/s/…/exec  비워 두면 직접 입력만 돼요
   // ▲▲▲
   var SCOPE="https://www.googleapis.com/auth/calendar.app.created", TZ="Asia/Seoul", CAL_NAME="출석알림";
   var DAYS=["월","화","수","목","금","토"], JS_DAY={"월":1,"화":2,"수":3,"목":4,"금":5,"토":6};
@@ -187,8 +187,10 @@ button{font:inherit;cursor:pointer}
       var res=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain"},body:b64,signal:ctl.signal});
       clearTimeout(timer);
       var j=null; try{j=await res.json()}catch(e){}
-      if(res.status===429)psay("지금 사용하는 사람이 많아요. 잠시 후 다시 하거나 아래에 직접 적어 주세요.","err");
-      else if(!res.ok||!j||!Array.isArray(j.classes))psay("사진을 읽지 못했어요. 시간표가 선명하게 다 보이는 캡처로 다시 하거나 아래에 직접 적어 주세요.","err");
+      var err=j&&j.error; // Apps Script는 늘 200으로 답하고 실패는 error 값으로 알려 준다
+      if(res.status===429||err==="busy")psay("지금 사용하는 사람이 많아요. 잠시 후 다시 하거나 아래에 직접 적어 주세요.","err");
+      else if(err==="bad_image")psay("사진을 읽지 못했어요. 시간표가 선명하게 다 보이는 캡처로 다시 하거나 아래에 직접 적어 주세요.","err");
+      else if(!res.ok||!j||!Array.isArray(j.classes))psay("지금은 사진 읽기가 잘 안 돼요. 잠시 후 다시 하거나 아래에 직접 적어 주세요.","err");
       else if(!j.classes.length)psay("사진에서 수업을 찾지 못했어요. 시간표가 다 보이게 다시 올리거나 아래에 직접 적어 주세요.","err");
       else{fill(j.classes);psay(j.classes.length+"개 수업을 읽었어요. 아래에서 맞는지 확인해 주세요.","ok")}
     }catch(e){
