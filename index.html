@@ -175,6 +175,35 @@ button{font:inherit;cursor:pointer}
       img.src=url;
     });
   }
+  // 사진 읽기 요청. 보통 몇 초면 끝나지만 가끔 한 번이 오래 걸려서(AI 서버가 붐빌 때),
+  // 답이 늦으면 같은 사진을 한 번 더 보내 먼저 온 답을 쓴다. 전체는 AI_WAIT까지만 기다린다
+  var AI_WAIT=100000, AI_RETRY=[15000,40000];
+  function readPhoto(b64){
+    return new Promise(function(resolve,reject){
+      var ctl=new AbortController(), done=false, pending=0, last=null, timers=[];
+      function finish(r,e){
+        if(done)return; done=true; timers.forEach(clearTimeout); ctl.abort();
+        if(e)reject(e); else resolve(r);
+      }
+      function send(){
+        if(done)return; pending++;
+        fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain"},body:b64,signal:ctl.signal}).then(async function(res){
+          var j=null; try{j=await res.json()}catch(e){}
+          pending--;
+          var r={status:res.status,ok:res.ok,j:j};
+          if(j&&Array.isArray(j.classes))finish(r);
+          else{last=r; if(!pending)finish(r)} // 실패 답은 아직 기다리는 요청이 있으면 그쪽을 본다
+        },function(e){
+          pending--; if(!pending)finish(last,last?null:e);
+        });
+      }
+      timers.push(setTimeout(function(){ // 시간 초과: 받은 실패 답이 있으면 그것을, 없으면 "너무 오래 걸림"
+        var e=new Error("timeout"); e.name="AbortError"; finish(last,last?null:e);
+      },AI_WAIT));
+      AI_RETRY.forEach(function(ms){timers.push(setTimeout(send,ms))});
+      send();
+    });
+  }
   function fill(classes){
     rowsEl.innerHTML="";
     classes.forEach(function(c){rowsEl.appendChild(rowEl({day:c.day,time:c.start,name:c.name,memo:c.room||""}))});
@@ -183,13 +212,11 @@ button{font:inherit;cursor:pointer}
   if(!AI_ENDPOINT){pick.hidden=true;document.getElementById("aion").hidden=true;document.getElementById("aioff").hidden=false}
   photo.addEventListener("change",async function(){
     var f=photo.files&&photo.files[0]; if(!f)return;
-    pick.classList.add("busy"); psay("사진을 읽는 중이에요. 보통 10~30초 걸려요…");
+    pick.classList.add("busy"); psay("사진을 읽는 중이에요. 보통 10초쯤 걸려요…");
+    var slow=setTimeout(function(){psay("아직 읽는 중이에요. 조금만 더 기다려 주세요…")},AI_RETRY[0]);
     try{
       var b64=await toJpegBase64(f);
-      var ctl=new AbortController(), timer=setTimeout(function(){ctl.abort()},100000); // 글자가 많은 시간표는 오래 걸릴 수 있어 100초까지 기다린다
-      var res=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain"},body:b64,signal:ctl.signal});
-      clearTimeout(timer);
-      var j=null; try{j=await res.json()}catch(e){}
+      var res=await readPhoto(b64), j=res.j;
       var err=j&&j.error; // Apps Script는 늘 200으로 답하고 실패는 error 값으로 알려 준다
       if(res.status===429||err==="busy")psay("지금 사용하는 사람이 많아요. 잠시 후 다시 하거나 아래에 직접 적어 주세요.","err");
       else if(err==="bad_image")psay("사진을 읽지 못했어요. 시간표가 선명하게 다 보이는 캡처로 다시 하거나 아래에 직접 적어 주세요.","err");
@@ -200,7 +227,7 @@ button{font:inherit;cursor:pointer}
       psay(e&&e.message==="image"?"이 사진 형식은 열 수 없어요. 화면 캡처(PNG·JPG)로 올려 주세요.":
         e&&e.name==="AbortError"?"읽는 데 너무 오래 걸려서 멈췄어요. 잠시 후 다시 하거나 아래에 직접 적어 주세요.":
         "사진을 읽지 못했어요(연결 문제). 잠시 후 다시 하거나 아래에 직접 적어 주세요.","err");
-    }finally{pick.classList.remove("busy");photo.value=""}
+    }finally{clearTimeout(slow);pick.classList.remove("busy");photo.value=""}
   });
 
   // ---------- 적용: 구글 캘린더 ----------
